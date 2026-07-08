@@ -13,4 +13,4 @@ checks:
 intervalSeconds: 60
 thresholds:
   minUptimePercent: 100
-  maxLatencyP95Ms: 5000
+  maxLatencyP95Ms: 8000

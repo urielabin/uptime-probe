@@ -12,9 +12,14 @@ export class BrowserCheckStrategy implements CheckStrategy {
 
   async run(): Promise<ProbeOutcome> {
     const { check } = this
-    const startedAtMs = Date.now()
     const { chromium } = await import('playwright')
     const browser = await chromium.launch()
+
+    // Timing starts after the browser is up, not before -- launching a
+    // fresh headless chromium process is tool/environment overhead (slow
+    // and highly variable on a cold CI runner), not part of the target's
+    // real-world latency a synthetic check is meant to measure.
+    const startedAtMs = Date.now()
 
     try {
       const page = await browser.newPage()
