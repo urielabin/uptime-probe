@@ -6,6 +6,7 @@ export function createFixtureApp(): Express {
   app.use(express.json())
 
   const receivedWebhooks: unknown[] = []
+  const receivedDashboardPushes: Array<{ authorization: string | undefined; body: unknown }> = []
 
   app.get('/health', (_req, res) => {
     res.status(200).json({ ok: true })
@@ -30,6 +31,15 @@ export function createFixtureApp(): Express {
 
   app.get('/webhook/received', (_req, res) => {
     res.status(200).json(receivedWebhooks)
+  })
+
+  app.post('/dashboard/ingest', (req, res) => {
+    receivedDashboardPushes.push({ authorization: req.headers['authorization'], body: req.body })
+    res.status(201).json({ received: true })
+  })
+
+  app.get('/dashboard/received', (_req, res) => {
+    res.status(200).json(receivedDashboardPushes)
   })
 
   return app

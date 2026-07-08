@@ -29,6 +29,8 @@ flowchart TD
     AI -->|no| TN["Templated incident summary"]
     GATE --> REP["Reporters: Console / JSON / HTML"]
     SUM --> EXP["Exporter: Prometheus text"]
+    SUM --> PUB{"DASHBOARD_API_URL set?"}
+    PUB -->|yes| DASH["Dashboard publisher (every cycle)"]
     CN --> REP
     TN --> REP
 ```
@@ -43,6 +45,7 @@ flowchart TD
 | Reports | Hand-rolled SVG charts (no chart library) |
 | Metrics export | Prometheus exposition format |
 | Alerting | Slack-compatible webhook POST |
+| Dashboard publishing (optional) | HTTP POST to a hosted dashboard |
 | LLM (optional) | Claude via `@anthropic-ai/sdk` |
 | Testing | Vitest (unit + real HTTP/browser/webhook integration against a fixture server) |
 | CI | GitHub Actions |
@@ -55,6 +58,7 @@ flowchart TD
 - **Reporter** — Console/JSON/HTML implementations, tied to the CI-gating `ReportContext`
 - **Exporter** — `PrometheusExporter` (file-format output only), split into a pure formatter (`prometheus.ts`, unit-testable without touching disk) and a file-IO wrapper
 - **Optional AI layer** — `createIncidentSummaryGenerator()` picks a Claude-backed generator when `ANTHROPIC_API_KEY` is set, otherwise a deterministic templated one — never a hard dependency
+- **Optional dashboard publisher** — `createDashboardPublisher()` picks an `HttpDashboardPublisher` when `DASHBOARD_API_URL`/`DASHBOARD_API_KEY` are set, otherwise a `NullPublisher` — never a hard dependency, fires unconditionally every cycle (not gated on threshold breach like the webhook alerter)
 
 ## Commands
 
@@ -98,4 +102,4 @@ alerting:
   webhookUrl: https://hooks.slack.com/services/T000/B000/XXXX
 ```
 
-`probe run <config>` runs every check once and exits non-zero if any threshold is violated, so it can gate a CI pipeline. `probe watch <config>` polls continuously on `intervalSeconds` (or `--interval`), rewriting reports each cycle and firing a webhook alert only on the pass→fail transition — it never terminates, so it's for local/long-running use, not CI. Set `ANTHROPIC_API_KEY` for a Claude-written incident summary; without it, a deterministic templated summary is used — checks, metrics, thresholds, and the Prometheus exporter are always free and local.
+`probe run <config>` runs every check once and exits non-zero if any threshold is violated, so it can gate a CI pipeline. `probe watch <config>` polls continuously on `intervalSeconds` (or `--interval`), rewriting reports each cycle and firing a webhook alert only on the pass→fail transition — it never terminates, so it's for local/long-running use, not CI. Set `ANTHROPIC_API_KEY` for a Claude-written incident summary; without it, a deterministic templated summary is used. Set `DASHBOARD_API_URL` and `DASHBOARD_API_KEY` to push every run to a hosted dashboard (e.g. [uptime-probe-dashboard](https://github.com/urielabin/uptime-probe-dashboard)) — checks, metrics, thresholds, and the Prometheus exporter are always free and local either way.

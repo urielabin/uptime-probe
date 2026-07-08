@@ -4,6 +4,7 @@ import type { CheckConfig } from './config/check-schema.js'
 import { WebhookAlerter } from './alerting/webhook-alerter.js'
 import type { Exporter } from './exporters/exporter.interface.js'
 import type { ProbeCollector } from './metrics/probe-collector.js'
+import { createDashboardPublisher } from './publishers/dashboard-publisher-factory.js'
 import type { ReportContext } from './reporters/report-context.js'
 import type { Reporter } from './reporters/reporter.interface.js'
 import { evaluateThresholds } from './thresholds/threshold-evaluator.js'
@@ -47,6 +48,10 @@ export async function runProbes(
   for (const exporter of exporters) {
     await exporter.export(context)
   }
+
+  // Unconditional, unlike the webhook alert below -- every cycle gets
+  // pushed to a configured dashboard, not just breaching ones.
+  await createDashboardPublisher().publish(context)
 
   const shouldAlert = options.alert ?? true
   if (shouldAlert && !thresholdResult.passed && config.alerting?.webhookUrl) {
