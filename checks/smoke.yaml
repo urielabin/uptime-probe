@@ -1,0 +1,16 @@
+name: smoke
+checks:
+  - name: health
+    type: http
+    url: http://localhost:4000/health
+    expectStatus: 200
+    maxLatencyMs: 2000
+  - name: homepage renders
+    type: browser
+    url: http://localhost:4000/
+    expectText: Welcome
+    maxLatencyMs: 10000
+intervalSeconds: 60
+thresholds:
+  minUptimePercent: 100
+  maxLatencyP95Ms: 5000

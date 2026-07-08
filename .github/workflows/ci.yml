@@ -1,0 +1,60 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - run: npm run lint
+      - run: npm run typecheck
+      - run: npm test
+      - run: npm run build
+
+  cli-smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+      - run: npm run build
+      - run: npx playwright install --with-deps chromium
+
+      # Real end-to-end check: starts the fixture server and drives the
+      # actual built CLI against it (no mocking), then verifies both the
+      # happy path and the failure/alerting path for real.
+      - name: Start fixture server
+        run: nohup npx tsx tests/fixtures/server.ts > fixture-server.log 2>&1 &
+      - name: Wait for fixture server
+        run: until curl -sf http://localhost:4000/health; do sleep 0.5; done
+
+      - name: Run CLI against a healthy config (must pass)
+        run: node dist/cli/index.js run checks/smoke.yaml --json report.json --html report.html --prom report.prom
+      - run: test -s report.json
+      - run: test -s report.html
+      - run: grep -q 'probe_success' report.prom
+
+      - name: Run CLI against a breaching config (must fail, must alert)
+        run: |
+          if node dist/cli/index.js run tests/fixtures/breach-check.yaml --json breach-report.json; then
+            echo "expected non-zero exit on threshold breach" && exit 1
+          fi
+          grep -q '"passed": false' breach-report.json
+          curl -sf http://localhost:4000/webhook/received | grep -q 'threshold violation'

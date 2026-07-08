@@ -1,0 +1,24 @@
+name: production api
+checks:
+  - name: homepage
+    type: http
+    url: https://example.com/
+    expectStatus: 200
+    maxLatencyMs: 400
+  - name: checkout page renders
+    type: browser
+    url: https://example.com/checkout
+    expectText: Add to cart
+    maxLatencyMs: 4000
+  - name: api health
+    type: http
+    url: https://api.example.com/health
+    bodyContains: '"status":"ok"'
+    maxLatencyMs: 250
+intervalSeconds: 60
+thresholds:
+  minUptimePercent: 99.5
+  maxLatencyP95Ms: 800
+  maxConsecutiveFailures: 3
+alerting:
+  webhookUrl: https://hooks.slack.com/services/T000/B000/XXXX

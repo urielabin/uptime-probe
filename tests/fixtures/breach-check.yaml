@@ -1,0 +1,11 @@
+name: breach fixture
+checks:
+  - name: down endpoint
+    type: http
+    url: http://localhost:4000/down
+    expectStatus: 200
+intervalSeconds: 60
+thresholds:
+  minUptimePercent: 100
+alerting:
+  webhookUrl: http://localhost:4000/webhook
